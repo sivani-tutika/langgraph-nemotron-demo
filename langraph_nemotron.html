@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LangGraph Multi-Agent Demo — Powered by Nemotron 3 Super</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Syne:wght@400;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0e0e0f;
+      --surface: #18181b;
+      --surface2: #1f1f23;
+      --border: rgba(255,255,255,0.08);
+      --border2: rgba(255,255,255,0.14);
+      --text: #e8e8e8;
+      --muted: #888;
+      --hint: #555;
+      --green: #76b900; /* NVIDIA green */
+      --green-dim: rgba(118,185,0,0.10);
+      --green-ring: rgba(118,185,0,0.18);
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'JetBrains Mono', monospace;
+      min-height: 100vh;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 2rem 1rem;
+    }
+
+    .container { width: 100%; max-width: 740px; }
+
+    /* ── Header ── */
+    .header-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 1.5rem; flex-wrap: wrap; }
+    .header-left {}
+    .badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: 11px; color: var(--muted);
+      border: 0.5px solid var(--border2); border-radius: 20px;
+      padding: 4px 10px; margin-bottom: 10px; letter-spacing: 0.05em;
+    }
+    .badge-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); }
+    h1 { font-family: 'Syne', sans-serif; font-size: 21px; font-weight: 700; margin-bottom: 3px; }
+    .subtitle { font-size: 12px; color: var(--muted); }
+    .model-pill {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: 11px; padding: 6px 12px;
+      border: 0.5px solid var(--green);
+      border-radius: 8px; color: var(--green);
+      white-space: nowrap; align-self: flex-start; margin-top: 4px;
+    }
+    .model-pill-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--green); }
+
+    /* ── API Key ── */
+    .apikey-row {
+      display: flex; gap: 8px; margin-bottom: 10px;
+      padding: 12px 14px;
+      background: var(--surface);
+      border: 0.5px solid var(--border2);
+      border-radius: 10px;
+      align-items: center;
+    }
+    .apikey-label { font-size: 11px; color: var(--muted); white-space: nowrap; letter-spacing: 0.04em; }
+    .apikey-input {
+      flex: 1; font-family: 'JetBrains Mono', monospace; font-size: 12px;
+      background: var(--surface2); color: var(--text);
+      border: 0.5px solid var(--border); border-radius: 6px;
+      padding: 8px 12px; outline: none;
+    }
+    .apikey-input:focus { border-color: var(--green); }
+    .apikey-hint { font-size: 10px; color: var(--hint); margin-bottom: 14px; }
+    .apikey-hint a { color: var(--muted); text-decoration: none; }
+    .apikey-hint a:hover { color: var(--text); }
+    .apikey-toggle {
+      font-family: 'JetBrains Mono', monospace; font-size: 11px;
+      background: transparent; color: var(--muted);
+      border: 0.5px solid var(--border); border-radius: 6px;
+      padding: 8px 10px; cursor: pointer; white-space: nowrap;
+    }
+    .apikey-toggle:hover { color: var(--text); border-color: var(--border2); }
+
+    /* ── Query ── */
+    .query-row { display: flex; gap: 8px; margin-bottom: 1.5rem; }
+    .query-input {
+      flex: 1; font-family: 'JetBrains Mono', monospace; font-size: 13px;
+      background: var(--surface); color: var(--text);
+      border: 0.5px solid var(--border2); border-radius: 8px;
+      padding: 12px 14px; outline: none;
+    }
+    .query-input:focus { border-color: var(--green); }
+    .run-btn {
+      font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 500;
+      padding: 12px 20px; border-radius: 8px; cursor: pointer; white-space: nowrap;
+      background: var(--green); color: #000; border: none; transition: opacity 0.2s;
+    }
+    .run-btn:hover { opacity: 0.85; }
+    .run-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+    /* ── Graph ── */
+    .graph-row {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 1.5rem; gap: 4px;
+    }
+    .node { display: flex; flex-direction: column; align-items: center; gap: 6px; flex: 1; }
+    .node-circle {
+      width: 52px; height: 52px; border-radius: 50%;
+      border: 1.5px solid var(--border2); background: var(--surface);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px; transition: all 0.3s;
+    }
+    .node-label { font-size: 10px; color: var(--muted); letter-spacing: 0.06em; text-align: center; transition: color 0.3s; }
+    .node.active .node-circle { border-color: var(--green); background: var(--green-dim); box-shadow: 0 0 0 5px var(--green-ring); }
+    .node.done .node-circle  { border-color: var(--green); background: var(--green-dim); }
+    .node.active .node-label,
+    .node.done .node-label   { color: var(--green); }
+    .edge { flex: 0 0 24px; height: 1.5px; background: var(--border2); position: relative; top: -10px; transition: background 0.4s; }
+    .edge.lit { background: var(--green); }
+
+    /* ── Output ── */
+    .output-area {
+      border: 0.5px solid var(--border2); border-radius: 10px;
+      overflow: hidden; min-height: 300px; margin-bottom: 1.5rem;
+    }
+    .output-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 16px; border-bottom: 0.5px solid var(--border);
+      background: var(--surface);
+    }
+    .output-title { font-size: 11px; color: var(--muted); letter-spacing: 0.06em; }
+    .output-status { font-size: 11px; color: var(--hint); }
+    .output-body { padding: 16px; display: flex; flex-direction: column; gap: 12px; background: var(--bg); }
+
+    .step-card { border: 0.5px solid var(--border); border-radius: 8px; overflow: hidden; }
+    .step-header {
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 14px; background: var(--surface);
+      border-bottom: 0.5px solid var(--border);
+    }
+    .step-icon { font-size: 14px; }
+    .step-name { font-size: 11px; font-weight: 500; color: var(--muted); letter-spacing: 0.06em; flex: 1; }
+    .step-time { font-size: 10px; color: var(--hint); }
+    .step-content { padding: 12px 14px; font-size: 12px; color: var(--text); line-height: 1.8; white-space: pre-wrap; }
+    .step-card.streaming .step-content::after { content: '▋'; animation: blink 0.8s step-start infinite; color: var(--green); }
+    @keyframes blink { 50% { opacity: 0; } }
+
+    .placeholder {
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; height: 240px; gap: 10px;
+    }
+    .placeholder-icon { font-size: 32px; opacity: 0.3; }
+    .placeholder-text { font-size: 12px; color: var(--hint); }
+
+    /* ── Presets ── */
+    .presets { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 2rem; align-items: center; }
+    .preset-label { font-size: 11px; color: var(--hint); }
+    .preset-btn {
+      font-family: 'JetBrains Mono', monospace; font-size: 11px;
+      padding: 6px 12px; border: 0.5px solid var(--border2);
+      border-radius: 20px; background: transparent; color: var(--muted); cursor: pointer; transition: all 0.15s;
+    }
+    .preset-btn:hover { border-color: var(--green); color: var(--green); }
+
+    /* ── Error ── */
+    .error-msg {
+      background: rgba(226,75,74,0.1); border: 0.5px solid rgba(226,75,74,0.3);
+      border-radius: 6px; padding: 10px 14px;
+      font-size: 12px; color: #f09595; white-space: pre-wrap;
+    }
+
+    /* ── Footer ── */
+    .footer { font-size: 11px; color: var(--hint); text-align: center; padding-bottom: 2rem; line-height: 2; }
+    .footer a { color: var(--muted); text-decoration: none; }
+    .footer a:hover { color: var(--text); }
+    .powered-row { display: flex; align-items: center; justify-content: center; gap: 16px; margin-bottom: 8px; flex-wrap: wrap; }
+    .powered-badge {
+      font-size: 10px; letter-spacing: 0.06em; color: var(--hint);
+      border: 0.5px solid var(--border); border-radius: 6px; padding: 4px 10px;
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <div class="header-row">
+    <div class="header-left">
+      <div class="badge"><span class="badge-dot"></span>LangChain x NVIDIA — live demo</div>
+      <h1>LangGraph multi-agent orchestrator</h1>
+      <p class="subtitle">4 agents · real Nemotron 3 Super inference · step-by-step trace</p>
+    </div>
+    <div class="model-pill"><span class="model-pill-dot"></span>Nemotron 3 Super · 120B / 12B active</div>
+  </div>
+
+  <!-- API Key -->
+  <div class="apikey-row">
+    <span class="apikey-label">OPENROUTER KEY</span>
+    <input class="apikey-input" id="apiKey" type="password" placeholder="sk-or-v1-..." autocomplete="off" />
+    <button class="apikey-toggle" onclick="toggleKey()">show</button>
+  </div>
+  <p class="apikey-hint">
+    Free key at <a href="https://openrouter.ai/keys" target="_blank">openrouter.ai/keys</a> —
+    Nemotron 3 Super is <strong style="color:var(--green)">$0/token</strong> on the free tier ·
+    No credit card needed
+  </p>
+
+  <!-- Query -->
+  <div class="query-row">
+    <input class="query-input" id="queryInput" type="text" placeholder="e.g. How does Nemotron's MoE architecture improve agent throughput?" />
+    <button class="run-btn" id="runBtn" onclick="runPipeline()">run ↗</button>
+  </div>
+
+  <!-- Graph nodes -->
+  <div class="graph-row">
+    <div class="node" id="n-planner">
+      <div class="node-circle">🗺</div>
+      <div class="node-label">PLANNER</div>
+    </div>
+    <div class="edge" id="e-1"></div>
+    <div class="node" id="n-researcher">
+      <div class="node-circle">🔍</div>
+      <div class="node-label">RESEARCHER</div>
+    </div>
+    <div class="edge" id="e-2"></div>
+    <div class="node" id="n-critic">
+      <div class="node-circle">⚖️</div>
+      <div class="node-label">CRITIC</div>
+    </div>
+    <div class="edge" id="e-3"></div>
+    <div class="node" id="n-writer">
+      <div class="node-circle">✍️</div>
+      <div class="node-label">WRITER</div>
+    </div>
+  </div>
+
+  <!-- Trace output -->
+  <div class="output-area">
+    <div class="output-header">
+      <span class="output-title">LANGGRAPH TRACE</span>
+      <span class="output-status" id="statusText">awaiting query</span>
+    </div>
+    <div class="output-body" id="outputBody">
+      <div class="placeholder">
+        <div class="placeholder-icon">⬡</div>
+        <div class="placeholder-text">enter your OpenRouter key and run a query</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Presets -->
+  <div class="presets">
+    <span class="preset-label">try:</span>
+    <button class="preset-btn" onclick="setPreset(this)">How does Nemotron's MoE improve throughput?</button>
+    <button class="preset-btn" onclick="setPreset(this)">LangGraph vs AutoGen for enterprise agents</button>
+    <button class="preset-btn" onclick="setPreset(this)">What is NVIDIA NIM and why does it matter?</button>
+    <button class="preset-btn" onclick="setPreset(this)">Speculative execution in multi-agent pipelines</button>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <div class="powered-row">
+      <span class="powered-badge">NVIDIA Nemotron 3 Super · 120B MoE</span>
+      <span class="powered-badge">OpenRouter API · free tier</span>
+      <span class="powered-badge">LangGraph pattern · 4 nodes · 3 edges</span>
+    </div>
+    <a href="https://openrouter.ai/nvidia/nemotron-3-super-120b-a12b:free" target="_blank">Model card</a> ·
+    <a href="https://github.com/langchain-ai/langgraph" target="_blank">LangGraph</a> ·
+    <a href="https://developer.nvidia.com/nemotron" target="_blank">NVIDIA Nemotron</a>
+  </div>
+
+</div>
+
+<script>
+  /* ── Agent definitions ── */
+  const AGENTS = [
+    {
+      id: 'n-planner', edge: null, icon: '🗺', label: 'PLANNER',
+      system: `You are the Planner agent in a LangGraph multi-agent pipeline powered by NVIDIA Nemotron 3 Super.
+Given the user's query, produce a brief structured plan: 2-3 concrete sub-tasks for the Researcher to address.
+Be terse. Use a numbered list. Max 70 words. No preamble.`
+    },
+    {
+      id: 'n-researcher', edge: 'e-1', icon: '🔍', label: 'RESEARCHER',
+      system: `You are the Researcher agent in a LangGraph pipeline.
+Given the plan and original query, produce 2-3 concise factual findings directly relevant to the question.
+Draw on your knowledge of AI, LLMs, NVIDIA hardware, and multi-agent systems.
+No padding. Max 90 words. No preamble.`
+    },
+    {
+      id: 'n-critic', edge: 'e-2', icon: '⚖️', label: 'CRITIC',
+      system: `You are the Critic agent in a LangGraph pipeline.
+Review the research findings and flag 1-2 gaps, assumptions, or missing nuances. Be direct and constructive.
+Then propose one concrete improvement or missing angle. Max 70 words. No preamble.`
+    },
+    {
+      id: 'n-writer', edge: 'e-3', icon: '✍️', label: 'WRITER',
+      system: `You are the Writer agent — the final node in a LangGraph pipeline powered by Nemotron 3 Super.
+Using all prior agent outputs, write a polished 3-4 sentence answer for an ML/AI developer audience.
+No filler. Synthesise the critique into the answer. End with one practical takeaway sentence.`
+    }
+  ];
+
+  /* ── Helpers ── */
+  function toggleKey() {
+    const input = document.getElementById('apiKey');
+    const btn = event.target;
+    if (input.type === 'password') { input.type = 'text'; btn.textContent = 'hide'; }
+    else { input.type = 'password'; btn.textContent = 'show'; }
+  }
+
+  function setPreset(btn) {
+    document.getElementById('queryInput').value = btn.textContent;
+  }
+
+  function resetNodes() {
+    AGENTS.forEach(a => {
+      document.getElementById(a.id).className = 'node';
+      if (a.edge) document.getElementById(a.edge).className = 'edge';
+    });
+  }
+
+  function activateNode(idx) {
+    const a = AGENTS[idx];
+    document.getElementById(a.id).className = 'node active';
+    if (a.edge) document.getElementById(a.edge).className = 'edge lit';
+  }
+
+  function doneNode(idx) {
+    document.getElementById(AGENTS[idx].id).className = 'node done';
+  }
+
+  function addStepCard(agent, streaming) {
+    const body = document.getElementById('outputBody');
+    const existing = document.getElementById('card-' + agent.id);
+    if (existing) existing.remove();
+    const card = document.createElement('div');
+    card.className = 'step-card' + (streaming ? ' streaming' : '');
+    card.id = 'card-' + agent.id;
+    const ts = new Date().toLocaleTimeString('en-US', { hour12: false });
+    card.innerHTML = `
+      <div class="step-header">
+        <span class="step-icon">${agent.icon}</span>
+        <span class="step-name">${agent.label}</span>
+        <span class="step-time">${ts}</span>
+      </div>
+      <div class="step-content" id="content-${agent.id}"></div>`;
+    body.appendChild(card);
+    card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    return card;
+  }
+
+  /* ── API call — OpenRouter, OpenAI-compatible ── */
+  async function callNemotron(apiKey, systemPrompt, userMessage) {
+    const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+        'HTTP-Referer': window.location.href,
+        'X-Title': 'LangGraph Nemotron Demo'
+      },
+      body: JSON.stringify({
+        model: 'nvidia/nemotron-3-super-120b-a12b:free',
+        max_tokens: 400,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user',   content: userMessage  }
+        ]
+      })
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err?.error?.message || `HTTP ${res.status} from OpenRouter`);
+    }
+
+    const data = await res.json();
+    return data.choices?.[0]?.message?.content?.trim() || '';
+  }
+
+  /* ── Main pipeline loop ── */
+  async function runPipeline() {
+    const apiKey = document.getElementById('apiKey').value.trim();
+    const query  = document.getElementById('queryInput').value.trim();
+
+    if (!apiKey) { alert('Please enter your OpenRouter API key first.\nGet a free one at openrouter.ai/keys'); return; }
+    if (!query)  { alert('Please enter a query.'); return; }
+
+    const btn = document.getElementById('runBtn');
+    btn.disabled = true;
+    resetNodes();
+
+    const body = document.getElementById('outputBody');
+    body.innerHTML = '';
+    document.getElementById('statusText').textContent = 'initialising graph...';
+
+    const context = `User query: "${query}"`;
+    const outputs = [];
+    const startTime = Date.now();
+
+    for (let i = 0; i < AGENTS.length; i++) {
+      const agent = AGENTS[i];
+      activateNode(i);
+      document.getElementById('statusText').textContent = `node ${i + 1}/4 · ${agent.label} running...`;
+
+      const card = addStepCard(agent, true);
+      const contentEl = document.getElementById('content-' + agent.id);
+
+      const priorContext = outputs.length > 0
+        ? `\n\n---\nPrior agent outputs (graph state):\n${outputs.map((o, j) => `[${AGENTS[j].label}]\n${o}`).join('\n\n')}`
+        : '';
+
+      const userMsg = context + priorContext;
+
+      try {
+        const result = await callNemotron(apiKey, agent.system, userMsg);
+        outputs.push(result);
+        contentEl.textContent = result;
+        card.className = 'step-card';
+      } catch (e) {
+        card.className = 'step-card';
+        contentEl.textContent = '[failed]';
+        const errDiv = document.createElement('div');
+        errDiv.className = 'error-msg';
+        errDiv.textContent = `Error at ${agent.label}: ${e.message}\n\nCheck your OpenRouter key at openrouter.ai/keys`;
+        body.appendChild(errDiv);
+        document.getElementById('statusText').textContent = 'error — see above';
+        btn.disabled = false;
+        return;
+      }
+
+      doneNode(i);
+      await new Promise(r => setTimeout(r, 250));
+    }
+
+    const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+    document.getElementById('statusText').textContent = `complete · 4 nodes · 3 edges · ${elapsed}s`;
+    btn.disabled = false;
+  }
+
+  /* Enter key shortcut */
+  document.getElementById('queryInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') runPipeline();
+  });
+</script>
+</body>
+</html>

@@ -2,13 +2,14 @@
 
 > A browser-native implementation of the LangGraph multi-agent orchestration pattern, powered by NVIDIA Nemotron 3 Super (120B MoE). Built the day of the LangChain × NVIDIA platform announcement. Zero dependencies. Zero build step. Works by opening a file.
 
-![Demo preview](preview.png)
+<img width="844" height="672" alt="Screenshot 2026-03-16 at 10 06 27 PM" src="https://github.com/user-attachments/assets/0d1aabae-217c-4b14-a5ce-127cca955515" />
 
 ---
 
-## Live Demo
+## Live Demo 
 
-👉 **[Try it on GitHub Pages](https://YOUR_USERNAME.github.io/langgraph-nemotron-demo)**
+
+👉 **[Try it on GitHub Pages](https://sivani-tutika.github.io/langgraph-nemotron-demo/langgraph-nemotron-demo.html)**
 
 Needs a free OpenRouter key → [openrouter.ai/keys](https://openrouter.ai/keys) (no credit card, Nemotron 3 Super is $0/token on free tier)
 
